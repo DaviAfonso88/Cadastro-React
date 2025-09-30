@@ -10,8 +10,14 @@ aside.logo img {
   width: 100%;
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
   aside.logo img {
     width: 350px;
+  }
+}
+
+@media (max-width: 576px) {
+  aside.logo img {
+    width: 200px;
   }
 }

@@ -1,6 +1,7 @@
-import { Component } from "react";
+import { useEffect, useState } from "react";
 import { Main } from "../template/Main";
-import axios from "axios";
+import "../template/Modal.css";
+import api from "../service/api";
 
 const headerProps = {
   icon: "users",
@@ -8,88 +9,273 @@ const headerProps = {
   subtitle: "Cadastro de usuários: Incluir, Listar, Alterar e Excluir",
 };
 
-const baseUrl = "http://localhost:3001/users";
-const initialState = {
-  user: {
-    name: "",
-    email: "",
-  },
-  list: [],
-};
+const initialUser = { name: "", email: "" };
 
-export default class UserCrud extends Component {
-  state = { ...initialState };
+export default function UserCrud() {
+  const [user, setUser] = useState(initialUser);
+  const [list, setList] = useState([]);
+  const [errors, setErrors] = useState({ name: "", email: "" });
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
 
-  componentWillMount() {
-    axios(baseUrl).then((resp) => this.setState({ list: resp.data }));
+  useEffect(() => {
+    api.get("/users").then((resp) => setList(resp.data));
+  }, []);
+
+  function clear() {
+    setUser(initialUser);
+    setErrors({ name: "", email: "" });
   }
 
-  clear() {
-    this.setState({ user: initialState.user });
+  function validate() {
+    const newErrors = { name: "", email: "" };
+    if (!user.name.trim()) newErrors.name = "O nome é obrigatório";
+    if (!user.email.trim()) newErrors.email = "O e-mail é obrigatório";
+    setErrors(newErrors);
+    return !newErrors.name && !newErrors.email;
   }
 
-  save() {
-    const user = this.state.user;
-    const method = user.id ? "put" : "post";
-    const url = user.id ? `${baseUrl}/${user.id}` : baseUrl;
-    axios[method](url, user).then((resp) => {
-      const list = this.getUpdatedList(resp.data);
-      this.setState({ user: initialState.user, list });
-    });
+  async function save() {
+    if (!validate()) return;
+
+    try {
+      if (user.id) {
+        const { data } = await api.put(`/users/${user.id}`, user);
+        setList((prev) => [data, ...prev.filter((u) => u.id !== user.id)]);
+      } else {
+        const { data } = await api.post("/users", user);
+        setList((prev) => [data, ...prev]);
+      }
+      clear();
+    } catch (err) {
+      console.error("Erro ao salvar usuário:", err);
+    }
   }
 
-  getUpdatedList(user, add = true) {
-    const list = this.state.list.filter((u) => u.id !== user.id);
-    if (add) list.unshift(user);
-    return list;
+  function updateField(e) {
+    const { name, value } = e.target;
+    setUser((prev) => ({ ...prev, [name]: value }));
+
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   }
 
-  updateField(event) {
-    const user = { ...this.state.user };
-    user[event.target.name] = event.target.value;
-    this.setState({ user });
+  function load(user) {
+    setUser(user);
   }
 
-  renderForm() {
+  function confirmRemove(user) {
+    setUserToDelete(user);
+    setShowConfirm(true);
+  }
+
+  async function removeConfirmed() {
+    try {
+      await api.delete(`/users/${userToDelete.id}`);
+      setList((prev) => prev.filter((u) => u.id !== userToDelete.id));
+    } catch (err) {
+      console.error("Erro ao remover usuário:", err);
+    } finally {
+      setShowConfirm(false);
+      setUserToDelete(null);
+    }
+  }
+
+  function renderForm() {
     return (
-      <div className="form">
-        <div className="row">
+      <div
+        className="card p-4 mb-4 shadow-sm"
+        style={{ borderRadius: "12px", background: "#fff" }}
+      >
+        <h5
+          className="mb-4"
+          style={{
+            fontWeight: "600",
+            background: "linear-gradient(90deg, #07a7e3, #32dac3)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Cadastro de Usuário
+        </h5>
+
+        <div className="row g-3">
           <div className="col-12 col-md-6">
-            <div className="form-group">
-              <label>Nome</label>
-              <input
-                type="text"
-                className="form-control"
-                name="name"
-                value={this.state.user.name}
-                onChange={(e) => this.updateField(e)}
-                placeholder="Digite o nome..."
-              />
-            </div>
+            <label className="form-label fw-semibold">Nome</label>
+            <input
+              type="text"
+              className={`form-control form-control-lg ${
+                errors.name ? "is-invalid" : ""
+              }`}
+              name="name"
+              value={user.name}
+              onChange={updateField}
+              placeholder="Digite o nome..."
+              style={{
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                transition: "0.3s",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+              }}
+            />
+            {errors.name && (
+              <div className="invalid-feedback">{errors.name}</div>
+            )}
           </div>
+
           <div className="col-12 col-md-6">
-            <div className="form-group">
-              <label>E-mail</label>
-              <input
-                type="text"
-                className="form-control"
-                name="email"
-                value={this.state.user.email}
-                onChange={(e) => this.updateField(e)}
-                placeholder="Digite o e-mail..."
-              />
-            </div>
+            <label className="form-label fw-semibold">E-mail</label>
+            <input
+              type="email"
+              className={`form-control form-control-lg ${
+                errors.email ? "is-invalid" : ""
+              }`}
+              name="email"
+              value={user.email}
+              onChange={updateField}
+              placeholder="Digite o e-mail..."
+              style={{
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                transition: "0.3s",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+              }}
+            />
+            {errors.email && (
+              <div className="invalid-feedback">{errors.email}</div>
+            )}
           </div>
         </div>
-        <hr />
-        <div className="row">
-          <div className="col-12 d-flex justify-content-end">
-            <button className="btn btn-primary" onClick={(e) => this.save(e)}>
-              Salvar
+
+        <div className="mt-4 d-flex justify-content-end gap-2">
+          <button
+            className="btn btn-primary btn-lg"
+            onClick={save}
+            style={{
+              background: "linear-gradient(135deg, #07a7e3, #32dac3)",
+              border: "none",
+              borderRadius: "8px",
+              color: "#fff",
+              transition: "0.3s",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            }}
+          >
+            Salvar
+          </button>
+
+          <button
+            className="btn btn-outline-secondary btn-lg"
+            onClick={clear}
+            style={{
+              borderRadius: "8px",
+              color: "#555",
+              borderColor: "#ccc",
+              transition: "0.3s",
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderTable() {
+    return (
+      <div className="table-responsive">
+        <table className="table shadow rounded overflow-hidden">
+          <thead style={{ backgroundColor: "#3c8a7f", color: "#fff" }}>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((u) => (
+              <tr
+                key={u.id}
+                style={{
+                  transition: "0.3s",
+                  cursor: "default",
+                  backgroundColor: "#fff",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#f0f9f8")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#fff")
+                }
+              >
+                <td>{u.id}</td>
+                <td>{u.name}</td>
+                <td>{u.email}</td>
+                <td className="d-flex gap-2 justify-content-center">
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => load(u)}
+                    title="Editar"
+                    style={{
+                      background: "linear-gradient(135deg, #07a7e3, #32dac3)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "36px",
+                      height: "36px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                      transition: "0.3s",
+                    }}
+                  >
+                    <i className="fa fa-pencil"></i>
+                  </button>
+
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => confirmRemove(u)}
+                    title="Excluir"
+                    style={{
+                      background: "linear-gradient(135deg, #ff5e5e, #ff8f8f)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "50%",
+                      width: "36px",
+                      height: "36px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                      transition: "0.3s",
+                    }}
+                  >
+                    <i className="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  function ConfirmModal() {
+    if (!showConfirm) return null;
+
+    return (
+      <div className="modal-overlay">
+        <div className="modal-card">
+          <h5>Confirmação</h5>
+          <p>Deseja realmente excluir o usuário "{userToDelete.name}"?</p>
+          <div className="modal-actions">
+            <button className="btn btn-danger" onClick={removeConfirmed}>
+              Excluir
             </button>
             <button
-              className="btn btn-secondary ms-2"
-              onClick={(e) => this.clear(e)}
+              className="btn btn-secondary"
+              onClick={() => setShowConfirm(false)}
             >
               Cancelar
             </button>
@@ -99,61 +285,11 @@ export default class UserCrud extends Component {
     );
   }
 
-  load(user) {
-    this.setState({ user });
-  }
-
-  remove(user) {
-    axios.delete(`${baseUrl}/${user.id}`).then((resp) => {
-      const list = this.getUpdatedList(user, false);
-      this.setState({ list });
-    });
-  }
-
-  renderTable() {
-    return (
-      <table className="table nt-4">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>E-mail</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>{this.renderRows()}</tbody>
-      </table>
-    );
-  }
-
-  renderRows() {
-    return this.state.list.map((user) => {
-      return (
-        <tr key={user.id}>
-          <td>{user.id}</td>
-          <td>{user.name}</td>
-          <td>{user.email}</td>
-          <td>
-            <button className="btn btn-warning" onClick={() => this.load(user)}>
-              <i className="fa fa-pencil"></i>
-            </button>
-            <button
-              className="btn btn-danger ms-2"
-              onClick={() => this.remove(user)}
-            >
-              <i className="fa fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      );
-    });
-  }
-
-  render() {
-    return (
-      <Main {...headerProps}>
-        {this.renderForm()} {this.renderTable()}
-      </Main>
-    );
-  }
+  return (
+    <Main {...headerProps}>
+      {renderForm()}
+      {renderTable()}
+      <ConfirmModal />
+    </Main>
+  );
 }

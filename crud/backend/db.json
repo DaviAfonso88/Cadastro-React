@@ -2,13 +2,28 @@
   "users": [
     {
       "id": 1,
-      "name": "Arthur Oliveira",
-      "email": "aoliveira@empresa.com"
+      "name": "João Silva",
+      "email": "joao.silva@example.com"
     },
     {
       "id": 2,
-      "name": "Maria Julia",
-      "email": "mj@empresa.com"
+      "name": "Maria Santos",
+      "email": "maria.santos@example.com"
+    },
+    {
+      "id": 3,
+      "name": "Carlos Oliveira",
+      "email": "carlos.oliveira@example.com"
+    },
+    {
+      "id": 4,
+      "name": "Ana Pereira",
+      "email": "ana.pereira@example.com"
+    },
+    {
+      "id": 5,
+      "name": "Lucas Costa",
+      "email": "lucas.costa@example.com"
     }
   ]
 }
