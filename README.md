@@ -127,4 +127,16 @@ O frontend estará disponível em **[http://localhost:3000](http://localhost:300
 
 ---
 
-✍️ Desenvolvido por **Davi Afonso** 🚀
+## 👨‍💻 Desenvolvido por
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="#">
+         <img src="https://avatars.githubusercontent.com/u/89953265?v=4" width="100px;" alt="Foto de Davi Afonso no GitHub"/><br>
+        <sub>
+          <b>Davi Afonso</b>
+        </sub>
+      </a>
+    </td>
+</table>
